@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Griffbrett">
+<meta name="theme-color" content="#faf9f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1f1f1d" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Griffbrett-Trainer</title>
+<style>
+:root{--bg:#faf9f5;--card:#fff;--ink:#2c2c2a;--muted:#888780;--line:#d3d1c7;--dot:#d85a30;--ok:#3b6d11;--okbg:#eaf3de;--bad:#a32d2d;--badbg:#fcebeb}
+@media (prefers-color-scheme:dark){:root{--bg:#1f1f1d;--card:#2c2c2a;--ink:#f1efe8;--muted:#b4b2a9;--line:#5f5e5a;--okbg:#27500a;--ok:#c0dd97;--badbg:#791f1f;--bad:#f7c1c1}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,system-ui,"Segoe UI",sans-serif;display:flex;justify-content:center}
+main{width:100%;max-width:520px;padding:calc(16px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));min-height:100vh;display:flex;flex-direction:column;gap:14px}
+header{display:flex;justify-content:space-between;align-items:baseline}
+h1{font-size:18px;font-weight:600;margin:0}
+.stats{font-size:13px;color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 11px;font-size:13px}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 10px 10px;transition:background .15s}
+.card.ok{background:var(--okbg)}.card.bad{background:var(--badbg)}
+svg{width:100%;display:block}
+.fb{min-height:24px;text-align:center;font-size:15px}
+.fb.ok{color:var(--ok)}.fb.bad{color:var(--bad)}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.keys.acc button{font-size:14px;padding:14px 0}
+.opts{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:14px;color:var(--muted)}
+.opts label{display:flex;align-items:center;gap:8px}
+.sw{appearance:none;-webkit-appearance:none;width:40px;height:24px;border-radius:12px;background:var(--line);position:relative;margin:0;transition:background .15s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
+.sw:checked{background:var(--ok)}.sw:checked::after{transform:translateX(16px)}
+.keys button{font-size:24px;font-weight:600;padding:16px 0;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.keys button:active{transform:scale(.96)}
+.keys button.right{background:var(--okbg);color:var(--ok);border-color:var(--ok)}
+.keys button.wrong{background:var(--badbg);color:var(--bad);border-color:var(--bad)}
+.foot{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.foot button{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px;padding:0}
+.bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+[hidden]{display:none!important}
+.master{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px}
+.master input{width:52px;font-size:16px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);text-align:center}
+.btn{font-size:15px;font-weight:600;padding:9px 16px;border-radius:10px;border:none;background:var(--ink);color:var(--bg)}
+.btn.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.tbar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.tbar i{display:block;height:100%;background:var(--dot);width:100%}
+.mhead{display:none;justify-content:space-between;align-items:center;font-size:14px;color:var(--muted)}
+main.running .chips,main.running .opts,main.running .master,main.running .foot,main.running .bar{display:none}
+main.running .mhead{display:flex}
+.result{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 18px;text-align:center}
+.result .score{font-size:56px;font-weight:700;line-height:1}
+.result ul{list-style:none;padding:0;margin:14px 0 0;text-align:left;font-size:14px}
+.result li{padding:6px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between}
+.rbtns{display:flex;gap:10px;justify-content:center;margin-top:18px}
+</style>
+</head>
+<body>
+<main>
+<header><h1>Griffbrett-Trainer</h1><span class="stats" id="stats"></span></header>
+<div class="chips" id="chips"></div>
+<div class="opts"><label><input type="checkbox" class="sw" id="optLabels"> Saitennamen</label><label><input type="checkbox" class="sw" id="optAcc"> ♯/♭-Töne</label><label><input type="checkbox" class="sw" id="optShuf"> Tasten mischen</label></div>
+<div class="master"><label>Master-Modus: <input type="number" id="secs" min="1" max="30" step="1" inputmode="numeric"> s pro Note</label><button class="btn" id="mStart">Start</button></div>
+<div class="mhead"><span id="mCount"></span><button class="btn sec" id="mAbort">Abbrechen</button></div>
+<div class="tbar" id="tbarW" hidden><i id="tbar"></i></div>
+<div class="result" id="result" hidden></div>
+<div class="card" id="card"><svg id="neck" viewBox="0 0 340 150"></svg></div>
+<div class="fb" id="fb">Welcher Ton ist das?</div>
+<div class="keys" id="keys"></div>
+<div class="bar"><i id="bar"></i></div>
+<div class="foot"><span id="learned"></span><button id="reset">Fortschritt zurücksetzen</button></div>
+</main>
+<script>
+const CH=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const STR=[{l:"E",o:"E",n:"tiefe E-Saite",y:5},{l:"A",o:"A",n:"A-Saite",y:4},{l:"D",o:"D",n:"D-Saite",y:3},{l:"G",o:"G",n:"G-Saite",y:2},{l:"B",o:"B",n:"B-Saite",y:1},{l:"e",o:"E",n:"hohe e-Saite",y:0}];
+const ALL=[];
+STR.forEach((s,si)=>{const b=CH.indexOf(s.o);for(let f=0;f<=12;f++){const n=CH[(b+f)%12];ALL.push({id:si+"-"+f,si,f,note:n,acc:n.includes("#")})}});
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let box=store.get("fbt-box",{});
+let active=store.get("fbt-strings",[0,1,2,3,4,5]);
+let useShuf=store.get("fbt-shuf",false),showLabels=store.get("fbt-labels",true),useAcc=store.get("fbt-acc",false);
+const FLAT={"C#":"D♭","D#":"E♭","F#":"G♭","G#":"A♭","A#":"B♭"};
+const disp=n=>n.includes("#")?n.replace("#","♯")+"/"+FLAT[n]:n;
+let cur=null,last=null,locked=false,session={ok:0,n:0};
+const $=id=>document.getElementById(id);
+const L=40,R=330,T=22,G=19,FW=(R-L)/12;
+function drawNeck(c){
+  let s="";
+  if(showLabels)["e","B","G","D","A","E"].forEach((l,i)=>s+=`<text x="14" y="${T+i*G+4}" font-size="12" text-anchor="middle" fill="var(--muted)">${l}</text>`);
+  for(let k=1;k<=12;k++)s+=`<line x1="${L+k*FW}" y1="${T}" x2="${L+k*FW}" y2="${T+5*G}" stroke="var(--line)" stroke-width="1.2"/>`;
+  s+=`<line x1="${L}" y1="${T}" x2="${L}" y2="${T+5*G}" stroke="var(--ink)" stroke-width="4"/>`;
+  for(let i=0;i<6;i++)s+=`<line x1="${L}" y1="${T+i*G}" x2="${R}" y2="${T+i*G}" stroke="var(--ink)" stroke-width="${0.7+i*0.3}"/>`;
+  const iy=T+5*G+14;[3,5,7,9].forEach(k=>s+=`<circle cx="${L+(k-.5)*FW}" cy="${iy}" r="3.2" fill="var(--line)"/>`);
+  [-4.5,4.5].forEach(d=>s+=`<circle cx="${L+11.5*FW+d}" cy="${iy}" r="3.2" fill="var(--line)"/>`);
+  if(c){const y=T+STR[c.si].y*G,x=c.f===0?L-9:L+(c.f-.5)*FW;s+=`<circle cx="${x}" cy="${y}" r="8" fill="var(--dot)"/>`}
+  $("neck").innerHTML=s;
+}
+function pool(){return ALL.filter(c=>active.includes(c.si)&&(useAcc||!c.acc))}
+function pick(){
+  const p=pool();if(!p.length){cur=null;drawNeck(null);$("fb").textContent="Wähle mindestens eine Saite.";return}
+  const w=p.map(c=>{const b=box[c.id]||0;return c.id===last?0.01:[8,4,2,1,.5][Math.min(b,4)]});
+  let r=Math.random()*w.reduce((a,b)=>a+b,0),i=0;while(r>w[i]){r-=w[i];i++}
+  cur=p[Math.min(i,p.length-1)];last=cur.id;locked=false;if(useShuf)buildKeys();
+  $("card").className="card";$("fb").className="fb";$("fb").textContent="Welcher Ton ist das?";
+  document.querySelectorAll(".keys button").forEach(b=>b.className="");
+  drawNeck(cur);
+}
+function answer(n,btn){
+  if(!cur||locked)return;locked=true;session.n++;
+  const ok=n===cur.note,pos=cur.f===0?"leere "+STR[cur.si].n:STR[cur.si].n+" · "+cur.f+". Bund";
+  if(ok){session.ok++;box[cur.id]=(box[cur.id]||0)+1;btn.className="right";$("card").className="card ok";$("fb").className="fb ok";$("fb").textContent="Richtig: "+disp(cur.note)+" ("+pos+")"}
+  else{box[cur.id]=0;btn.className="wrong";document.querySelector(`[data-n="${cur.note}"]`).className="right";$("card").className="card bad";$("fb").className="fb bad";$("fb").textContent="Das ist "+disp(cur.note)+" ("+pos+")"}
+  store.set("fbt-box",box);
+  if(M){clearInterval(M.timer);if(ok)session.ok--;session.n--;M.res.push({c:cur,ok,t:(performance.now()-M.t0)/1000});setTimeout(nextMaster,ok?500:1500);return}
+  upd();setTimeout(pick,ok?700:1800);
+}
+function upd(){
+  const p=pool(),l=p.filter(c=>(box[c.id]||0)>=3).length;
+  $("stats").textContent=session.n?`${session.ok}/${session.n} richtig`:"";
+  $("learned").textContent=`Sicher: ${l} von ${p.length}`;
+  $("bar").style.width=(p.length?l/p.length*100:0)+"%";
+}
+function chips(){
+  $("chips").innerHTML="";
+  STR.forEach((s,i)=>{const b=document.createElement("button");b.className="chip"+(active.includes(i)?" on":"");b.textContent=s.l+"-Saite";
+  b.onclick=()=>{active=active.includes(i)?active.filter(x=>x!==i):[...active,i].sort();store.set("fbt-strings",active);chips();upd();pick()};$("chips").appendChild(b)});
+}
+function buildKeys(){$("keys").innerHTML="";$("keys").className=useAcc?"keys acc":"keys";
+let list=(useAcc?CH:["C","D","E","F","G","A","B"]).slice();if(useShuf)for(let i=list.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[list[i],list[j]]=[list[j],list[i]]}
+list.forEach(n=>{const b=document.createElement("button");b.textContent=disp(n);b.dataset.n=n;b.onclick=()=>answer(n,b);$("keys").appendChild(b)})}
+$("optShuf").checked=useShuf;$("optShuf").onchange=e=>{useShuf=e.target.checked;store.set("fbt-shuf",useShuf);buildKeys()};
+$("optLabels").checked=showLabels;$("optAcc").checked=useAcc;
+$("optLabels").onchange=e=>{showLabels=e.target.checked;store.set("fbt-labels",showLabels);drawNeck(cur)};
+$("optAcc").onchange=e=>{useAcc=e.target.checked;store.set("fbt-acc",useAcc);buildKeys();upd();pick()};
+buildKeys();
+let armed=false;$("reset").onclick=()=>{if(!armed){armed=true;$("reset").textContent="Nochmal tippen zum Bestätigen";setTimeout(()=>{armed=false;$("reset").textContent="Fortschritt zurücksetzen"},3000);return}
+armed=false;$("reset").textContent="Fortschritt zurücksetzen";box={};store.set("fbt-box",box);session={ok:0,n:0};upd()};
+let M=null;
+$("secs").value=store.get("fbt-secs",5);
+function posTxt(c){return c.f===0?"leere "+STR[c.si].n:STR[c.si].n+" · "+c.f+". Bund"}
+function shuf(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function startMaster(){
+  const s=Math.max(1,Math.min(30,Math.round(+$("secs").value||5)));$("secs").value=s;store.set("fbt-secs",s);
+  const p=pool();if(!p.length)return;
+  let q=shuf(p);while(q.length<10)q=q.concat(shuf(p));
+  M={q:q.slice(0,10),i:-1,res:[],secs:s,timer:null};
+  document.querySelector("main").classList.add("running");
+  $("result").hidden=true;$("card").hidden=false;$("keys").hidden=false;$("fb").hidden=false;$("tbarW").hidden=false;
+  nextMaster();
+}
+function nextMaster(){
+  if(!M)return;M.i++;if(M.i>=10)return endMaster();
+  cur=M.q[M.i];locked=false;
+  $("card").className="card";$("fb").className="fb";
+  if(useShuf)buildKeys();else document.querySelectorAll(".keys button").forEach(b=>b.className="");
+  drawNeck(cur);$("mCount").textContent=`Note ${M.i+1} von 10`;$("fb").textContent="Welcher Ton ist das?";
+  M.t0=performance.now();$("tbar").style.width="100%";clearInterval(M.timer);
+  M.timer=setInterval(()=>{const el=(performance.now()-M.t0)/1000;$("tbar").style.width=Math.max(0,100-el/M.secs*100)+"%";if(el>=M.secs){clearInterval(M.timer);timeUp()}},50);
+}
+function timeUp(){
+  if(!M||locked)return;locked=true;box[cur.id]=0;store.set("fbt-box",box);
+  const k=document.querySelector(`[data-n="${cur.note}"]`);if(k)k.className="right";
+  $("card").className="card bad";$("fb").className="fb bad";$("fb").textContent="Zeit abgelaufen: "+disp(cur.note)+" ("+posTxt(cur)+")";
+  M.res.push({c:cur,ok:false,t:M.secs,to:true});setTimeout(nextMaster,1500);
+}
+function endMaster(){
+  clearInterval(M.timer);
+  const r=M.res,n=r.filter(x=>x.ok).length,okT=r.filter(x=>x.ok).map(x=>x.t);
+  const avg=okT.length?okT.reduce((a,b)=>a+b,0)/okT.length:null;
+  const key="fbt-best-"+M.secs+"-"+(useAcc?1:0),best=store.get(key,null);
+  const rec=!best||n>best.n||(n===best.n&&avg!==null&&avg<best.avg);
+  if(rec&&n>0)store.set(key,{n,avg});
+  const miss=r.filter(x=>!x.ok);
+  $("card").hidden=true;$("keys").hidden=true;$("fb").hidden=true;$("tbarW").hidden=true;$("mCount").textContent="Abrechnung";
+  $("result").innerHTML=`<div class="score">${n}/10</div>
+  <div style="color:var(--muted);margin-top:8px">${avg!==null?"Ø "+avg.toFixed(1)+" s pro richtige Antwort · ":""}${M.secs} s pro Note${useAcc?" · mit ♯/♭":""}</div>
+  <div style="margin-top:8px;font-size:14px;color:${rec&&n>0?"var(--ok)":"var(--muted)"}">${rec&&n>0?"Neuer Rekord":best?"Rekord: "+best.n+"/10"+(best.avg!=null?", Ø "+best.avg.toFixed(1)+" s":""):""}</div>
+  ${miss.length?"<ul>"+miss.map(x=>`<li><span>${posTxt(x.c)}</span><span>${disp(x.c.note)}${x.to?" · Zeit":""}</span></li>`).join("")+"</ul>":`<div style="margin-top:14px">Alles richtig.</div>`}
+  <div class="rbtns"><button class="btn" id="rAgain">Nochmal</button><button class="btn sec" id="rBack">Zurück zum Üben</button></div>`;
+  $("result").hidden=false;
+  $("rAgain").onclick=startMaster;$("rBack").onclick=exitMaster;
+}
+function exitMaster(){
+  if(M)clearInterval(M.timer);M=null;
+  document.querySelector("main").classList.remove("running");
+  $("result").hidden=true;$("tbarW").hidden=true;$("card").hidden=false;$("keys").hidden=false;$("fb").hidden=false;
+  buildKeys();upd();pick();
+}
+$("mStart").onclick=startMaster;$("mAbort").onclick=exitMaster;
+chips();upd();pick();
+</script>
+</body>
+</html>
