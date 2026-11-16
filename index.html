@@ -38,6 +38,9 @@ body[data-theme=metal] h1,body[data-theme=hendrix] h1{font-size:24px;font-weight
 .chip.on{background:var(--ink);color:var(--inv);border-color:var(--ink)}
 .opts{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:14px;color:var(--muted)}
 .opts label{display:flex;align-items:center;gap:8px}
+.mini{display:flex;align-items:center;gap:4px}.mini span{margin-right:4px}
+.mini button{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 10px;font-size:13px}
+.mini button.on{background:var(--ink);color:var(--inv);border-color:var(--ink)}
 .sw{appearance:none;-webkit-appearance:none;width:40px;height:24px;border-radius:12px;background:var(--line);position:relative;margin:0;transition:background .15s}
 .sw::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s}
 .sw:checked{background:var(--ok)}.sw:checked::after{transform:translateX(16px)}
@@ -80,7 +83,7 @@ main.running .mhead{display:flex}
 <header><h1>Griffbrett-Trainer</h1><span class="stats" id="stats"></span></header>
 <div class="seg" id="seg"><button data-m="read">Ton erkennen</button><button data-m="find">Ton finden</button></div>
 <div class="chips" id="chips"></div>
-<div class="opts"><label><input type="checkbox" class="sw" id="optLabels"> Saitennamen</label><label><input type="checkbox" class="sw" id="optAcc"> ♯/♭-Töne</label><label id="shufWrap"><input type="checkbox" class="sw" id="optShuf"> Tasten mischen</label><label id="strWrap"><input type="checkbox" class="sw" id="optStr"> Mit Saite</label></div>
+<div class="opts"><label><input type="checkbox" class="sw" id="optLabels"> Saitennamen</label><label><input type="checkbox" class="sw" id="optAcc"> ♯/♭-Töne</label><label id="shufWrap"><input type="checkbox" class="sw" id="optShuf"> Tasten mischen</label><div class="mini" id="strWrap"><span>Saite</span><button data-s="one">Eine</button><button data-s="all">Alle</button><button data-s="mix">Gemischt</button></div></div>
 <div class="master"><label>Master: <input type="number" id="secs" min="1" max="60" step="1" inputmode="numeric"> s pro Aufgabe</label><button class="btn" id="mStart">Start</button></div>
 <div class="mhead"><span id="mCount"></span><button class="btn sec" id="mAbort">Abbrechen</button></div>
 <div class="tbar" id="tbarW" hidden><i id="tbar"></i></div>
@@ -106,19 +109,22 @@ const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v)
 let box=store.get("fbt-box2",null);if(!box||!box.read)box={read:store.get("fbt-box",{})};if(!box.find)box.find={};
 let mode=store.get("fbt-mode","read");if(mode!=="find")mode="read";
 let active=store.get("fbt-strings",[0,1,2,3,4,5]);
-let useShuf=store.get("fbt-shuf",false),showLabels=store.get("fbt-labels",true),useAcc=store.get("fbt-acc",false),withStr=store.get("fbt-withstr",true);
+let useShuf=store.get("fbt-shuf",false),showLabels=store.get("fbt-labels",true),useAcc=store.get("fbt-acc",false);
+let findSub=store.get("fbt-findsub",store.get("fbt-withstr",true)?"one":"all");if(!["one","all","mix"].includes(findSub))findSub="one";
 let cur=null,last=null,locked=false,errors=0,revealed=false,found=new Set(),flash=null,session={ok:0,n:0},M=null;
 const $=id=>document.getElementById(id);
 const saveBox=()=>store.set("fbt-box2",box);
 const L=40,R=334,T=20,G=22,FW=(R-L)/NF;
 const dotX=f=>f===0?L-10:L+(f-.5)*FW,dotY=si=>T+STR[si].y*G;
 
+function allowed(){return mode==="find"&&cur&&cur.si!=null?[cur.si]:active}
 function drawNeck(dots,hi){
+  const al=allowed();
   let s=`<rect x="${L}" y="${T-9}" width="${R-L}" height="${5*G+18}" rx="2" fill="var(--wood)"/>`;
-  if(showLabels)["e","B","G","D","A","E"].forEach((l,i)=>s+=`<text x="12" y="${T+i*G+4}" font-size="12" text-anchor="middle" fill="var(--muted)">${l}</text>`);
+  if(showLabels)["e","B","G","D","A","E"].forEach((l,i)=>s+=`<text x="12" y="${T+i*G+4}" font-size="12" text-anchor="middle" fill="var(--muted)"${al.includes(5-i)?"":` opacity="0.35"`}>${l}</text>`);
   for(let k=1;k<=NF;k++)s+=`<line x1="${L+k*FW}" y1="${T}" x2="${L+k*FW}" y2="${T+5*G}" stroke="var(--fret)" stroke-width="1.2"/>`;
   s+=`<line x1="${L}" y1="${T-9}" x2="${L}" y2="${T+5*G+9}" stroke="var(--nut)" stroke-width="4"/>`;
-  for(let i=0;i<6;i++){const isHi=hi!=null&&STR[hi].y===i;s+=`<line x1="${L}" y1="${T+i*G}" x2="${R}" y2="${T+i*G}" stroke="${isHi?"var(--dot)":"var(--string)"}" stroke-width="${isHi?3.5:0.7+i*0.3}"/>`}
+  for(let i=0;i<6;i++){const isHi=hi!=null&&STR[hi].y===i,si=STR.findIndex(x=>x.y===i),on=al.includes(si);s+=`<line x1="${L}" y1="${T+i*G}" x2="${R}" y2="${T+i*G}" stroke="${isHi?"var(--dot)":"var(--string)"}" stroke-width="${isHi?3.5:0.7+i*0.3}"${on?"":` stroke-opacity="0.22"`}/>`}
   const iy=T+5*G+16;[3,5,7,9,15].forEach(k=>s+=`<circle cx="${L+(k-.5)*FW}" cy="${iy}" r="3.2" fill="var(--inlay)"/>`);
   [-4.5,4.5].forEach(d=>s+=`<circle cx="${L+11.5*FW+d}" cy="${iy}" r="3.2" fill="var(--inlay)"/>`);
   (dots||[]).forEach(c=>{const x=dotX(c.f),y=dotY(c.si),k=c.k||"main";
@@ -139,9 +145,9 @@ function findPositions(note,si){
 function pool(){
   if(mode==="read")return ALL.filter(c=>active.includes(c.si)&&(useAcc||!c.acc));
   const notes=CH.filter(n=>useAcc||!n.includes("#"));
-  if(withStr){const out=[];active.forEach(si=>notes.forEach(n=>out.push({id:"s"+si+"-"+n,si,note:n})));return out}
-  if(!active.length)return [];
-  return notes.map(n=>({id:"n-"+n,si:null,note:n}));
+  const one=[];active.forEach(si=>notes.forEach(n=>one.push({id:"s"+si+"-"+n,si,note:n})));
+  const all=active.length?notes.map(n=>({id:"n-"+n,si:null,note:n})):[];
+  return findSub==="one"?one:findSub==="all"?all:one.concat(all);
 }
 function prepare(c){if(mode==="find")c.pos=findPositions(c.note,c.si);return c}
 function desc(c){
@@ -194,8 +200,8 @@ function hitTest(ev){
   const r=$("neck").getBoundingClientRect();if(!r.width)return null;
   const x=(ev.clientX-r.left)/r.width*340,y=(ev.clientY-r.top)/r.height*160;
   let best=null,bd=1e9;
-  for(let si=0;si<6;si++){const d=Math.abs(y-dotY(si));if(d<bd){bd=d;best=si}}
-  if(bd>G*0.6)return null;
+  for(const si of allowed()){const d=Math.abs(y-dotY(si));if(d<bd){bd=d;best=si}}
+  if(best==null||bd>G*0.9)return null;
   if(x<L-22||x>R+6)return null;
   const f=x<L+3?0:Math.min(NF,Math.max(1,Math.ceil((x-L)/FW)));
   return {si:best,f};
@@ -281,14 +287,14 @@ function endMaster(){
   const r=M.res,n=r.filter(x=>x.ok).length,okT=r.filter(x=>x.ok).map(x=>x.t);
   const avg=okT.length?okT.reduce((a,b)=>a+b,0)/okT.length:null;
   const errs=r.reduce((a,x)=>a+(x.errors||0),0);
-  const bkey="fbt-best-"+(mode==="find"?"find-"+(withStr?"s-":"a-"):"")+M.secs+"-"+(useAcc?1:0),best=store.get(bkey,null);
+  const bkey="fbt-best-"+(mode==="find"?"find-"+findSub+"-":"")+M.secs+"-"+(useAcc?1:0),best=store.get(bkey,null);
   const rec=n>0&&(!best||n>best.n||(n===best.n&&avg<best.avg));
   if(rec)store.set(bkey,{n,avg});
   const miss=r.filter(x=>!x.ok);
   $("card").hidden=true;$("keys").hidden=true;$("pbtns").hidden=true;$("fb").hidden=true;$("tbarW").hidden=true;$("mCount").textContent="Abrechnung";
   const line=x=>mode==="find"?`<li><span>${desc(x.c)}</span><span>${x.got} von ${x.c.pos.length} · Zeit</span></li>`:`<li><span>${desc(x.c)}</span><span>${disp(x.c.note)}${x.to?" · Zeit":""}</span></li>`;
   $("result").innerHTML=`<div class="score">${n}/10</div>
-  <div style="color:var(--muted);margin-top:8px">${mode==="find"?"Ton finden"+(withStr?" mit Saite":" überall")+" · ":""}${avg!==null?"Ø "+avg.toFixed(1)+" s · ":""}${M.secs} s pro Aufgabe${useAcc?" · mit ♯/♭":""}${mode==="find"?" · "+errs+" Fehltipp"+(errs===1?"":"s"):""}</div>
+  <div style="color:var(--muted);margin-top:8px">${mode==="find"?"Ton finden"+{one:" auf einer Saite",all:" überall",mix:" gemischt"}[findSub]+" · ":""}${avg!==null?"Ø "+avg.toFixed(1)+" s · ":""}${M.secs} s pro Aufgabe${useAcc?" · mit ♯/♭":""}${mode==="find"?" · "+errs+" Fehltipp"+(errs===1?"":"s"):""}</div>
   <div style="margin-top:8px;font-size:14px;color:${rec?"var(--ok)":"var(--muted)"}">${rec?"Neuer Rekord":best?"Rekord: "+best.n+"/10"+(best.avg!=null?", Ø "+best.avg.toFixed(1)+" s":""):""}</div>
   ${miss.length?"<ul>"+miss.map(line).join("")+"</ul>":`<div style="margin-top:14px">Alles richtig.</div>`}
   <div class="rbtns"><button class="btn" id="rAgain">Nochmal</button><button class="btn sec" id="rBack">Zurück zum Üben</button></div>`;
@@ -301,13 +307,15 @@ function exitMaster(silent){
   $("result").hidden=true;$("tbarW").hidden=true;$("card").hidden=false;$("fb").hidden=false;
   updModeUI();loadSecs();if(!silent){buildKeys();upd();pick()}
 }
-function loadSecs(){$("secs").value=store.get("fbt-secs-"+mode,store.get("fbt-secs",mode==="find"?(withStr?5:20):5))}
+function loadSecs(){$("secs").value=store.get("fbt-secs-"+mode,store.get("fbt-secs",mode==="find"?{one:5,all:20,mix:15}[findSub]:5))}
 
 /* Verdrahtung */
 document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>{if(b.dataset.m!==mode){setMode(b.dataset.m);loadSecs()}});
 $("neck").addEventListener("pointerdown",tap);
 $("optShuf").checked=useShuf;$("optShuf").onchange=e=>{useShuf=e.target.checked;store.set("fbt-shuf",useShuf);buildKeys()};
-$("optStr").checked=withStr;$("optStr").onchange=e=>{withStr=e.target.checked;store.set("fbt-withstr",withStr);last=null;upd();pick()};
+function updSub(){document.querySelectorAll("#strWrap button").forEach(b=>b.className=b.dataset.s===findSub?"on":"")}
+document.querySelectorAll("#strWrap button").forEach(b=>b.onclick=()=>{if(b.dataset.s===findSub)return;findSub=b.dataset.s;store.set("fbt-findsub",findSub);updSub();last=null;loadSecs();upd();pick()});
+updSub();
 $("optLabels").checked=showLabels;$("optAcc").checked=useAcc;
 $("optLabels").onchange=e=>{showLabels=e.target.checked;store.set("fbt-labels",showLabels);if(!cur)return;if(mode==="read")drawNeck([cur],null);else drawNeck(findDots(),cur.si)};
 $("optAcc").onchange=e=>{useAcc=e.target.checked;store.set("fbt-acc",useAcc);buildKeys();upd();pick()};
