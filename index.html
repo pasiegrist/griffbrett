@@ -12,8 +12,8 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Griffbrett-Trainer</title>
 <style>
-:root{--bg:#faf9f5;--card:#fff;--ink:#2c2c2a;--muted:#888780;--line:#d3d1c7;--dot:#d85a30;--ok:#3b6d11;--okbg:#eaf3de;--bad:#a32d2d;--badbg:#fcebeb}
-@media (prefers-color-scheme:dark){:root{--bg:#1f1f1d;--card:#2c2c2a;--ink:#f1efe8;--muted:#b4b2a9;--line:#5f5e5a;--okbg:#27500a;--ok:#c0dd97;--badbg:#791f1f;--bad:#f7c1c1}}
+:root{--bg:#faf9f5;--card:#fff;--ink:#2c2c2a;--muted:#888780;--line:#d3d1c7;--dot:#d85a30;--ok:#3b6d11;--okbg:#eaf3de;--bad:#a32d2d;--badbg:#fcebeb;--okdot:#639922}
+@media (prefers-color-scheme:dark){:root{--bg:#1f1f1d;--card:#2c2c2a;--ink:#f1efe8;--muted:#b4b2a9;--line:#5f5e5a;--okbg:#27500a;--ok:#c0dd97;--badbg:#791f1f;--bad:#f7c1c1;--okdot:#97c459}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,system-ui,"Segoe UI",sans-serif;display:flex;justify-content:center}
 main{width:100%;max-width:520px;padding:calc(16px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));min-height:100vh;display:flex;flex-direction:column;gap:14px}
@@ -36,7 +36,7 @@ h1{font-size:18px;font-weight:600;margin:0}
 .target{text-align:center;margin:-4px 0 10px}
 .target b{display:block;font-size:52px;line-height:1.05}
 .target span{font-size:15px;color:var(--muted)}
-svg{width:100%;display:block}
+svg{width:100%;display:block;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .fb{min-height:24px;text-align:center;font-size:15px}
 .fb.ok{color:var(--ok)}.fb.bad{color:var(--bad)}
 .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -45,16 +45,6 @@ svg{width:100%;display:block}
 .keys button:active{transform:scale(.96)}
 .keys button.right{background:var(--okbg);color:var(--ok);border-color:var(--ok)}
 .keys button.wrong{background:var(--badbg);color:var(--bad);border-color:var(--bad)}
-.play{display:flex;flex-direction:column;gap:12px;align-items:stretch}
-.micbox{text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
-.hint{font-size:13px;color:var(--muted);text-align:center}
-.err{font-size:13px;color:var(--bad);text-align:center}
-.meter{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--muted)}
-.meter b{min-width:64px;font-size:18px;color:var(--ink)}
-.cents{flex:1;height:8px;background:var(--line);border-radius:4px;position:relative}
-.cents::after{content:"";position:absolute;left:50%;top:-3px;width:1px;height:14px;background:var(--muted)}
-.cents i{position:absolute;top:-4px;width:6px;height:16px;border-radius:3px;background:var(--muted);left:50%;margin-left:-3px;transition:left .08s}
-.cents i.in{background:var(--ok)}
 .pbtns{display:flex;gap:10px;justify-content:center}
 .foot{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
 .foot button{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px;padding:0}
@@ -78,22 +68,17 @@ main.running .mhead{display:flex}
 <body>
 <main>
 <header><h1>Griffbrett-Trainer</h1><span class="stats" id="stats"></span></header>
-<div class="seg" id="seg"><button data-m="read">Ton erkennen</button><button data-m="play">Ton spielen</button></div>
+<div class="seg" id="seg"><button data-m="read">Ton erkennen</button><button data-m="find">Ton finden</button></div>
 <div class="chips" id="chips"></div>
-<div class="opts"><label><input type="checkbox" class="sw" id="optLabels"> Saitennamen</label><label><input type="checkbox" class="sw" id="optAcc"> ♯/♭-Töne</label><label id="shufWrap"><input type="checkbox" class="sw" id="optShuf"> Tasten mischen</label></div>
-<div class="master"><label>Master-Modus: <input type="number" id="secs" min="1" max="30" step="1" inputmode="numeric"> s pro Note</label><button class="btn" id="mStart">Start</button></div>
+<div class="opts"><label><input type="checkbox" class="sw" id="optLabels"> Saitennamen</label><label><input type="checkbox" class="sw" id="optAcc"> ♯/♭-Töne</label><label id="shufWrap"><input type="checkbox" class="sw" id="optShuf"> Tasten mischen</label><label id="strWrap"><input type="checkbox" class="sw" id="optStr"> Mit Saite</label></div>
+<div class="master"><label>Master-Modus: <input type="number" id="secs" min="1" max="60" step="1" inputmode="numeric"> s pro Aufgabe</label><button class="btn" id="mStart">Start</button></div>
 <div class="mhead"><span id="mCount"></span><button class="btn sec" id="mAbort">Abbrechen</button></div>
 <div class="tbar" id="tbarW" hidden><i id="tbar"></i></div>
 <div class="result" id="result" hidden></div>
-<div class="card" id="card"><div class="target" id="target" hidden></div><svg id="neck" viewBox="0 0 340 150"></svg></div>
+<div class="card" id="card"><div class="target" id="target" hidden></div><svg id="neck" viewBox="0 0 340 160"></svg></div>
 <div class="fb" id="fb"></div>
 <div class="keys" id="keys"></div>
-<div class="play" id="play" hidden>
-  <div class="micbox" id="micbox"><button class="btn" id="micBtn">Mikrofon starten</button><div class="hint">Gitarre stimmen, dann den Ton auf der markierten Saite spielen.</div></div>
-  <div class="err" id="micErr"></div>
-  <div class="meter" id="meter" hidden><span>Gehört</span><b id="heard">–</b><div class="cents"><i id="needle"></i></div></div>
-  <div class="pbtns"><button class="btn sec" id="pShow">Zeigen</button><button class="btn sec" id="pSkip">Überspringen</button></div>
-</div>
+<div class="pbtns" id="pbtns" hidden><button class="btn sec" id="pShow">Zeigen</button><button class="btn sec" id="pSkip">Überspringen</button></div>
 <div class="bar"><i id="bar"></i></div>
 <div class="foot"><span id="learned"></span><button id="reset">Fortschritt zurücksetzen</button></div>
 </main>
@@ -102,83 +87,133 @@ const CH=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 const FLAT={"C#":"D♭","D#":"E♭","F#":"G♭","G#":"A♭","A#":"B♭"};
 const disp=n=>n.includes("#")?n.replace("#","♯")+"/"+FLAT[n]:n;
 const STR=[{l:"E",n:"tiefe E-Saite",d:"tiefen E-Saite",y:5,m:40},{l:"A",n:"A-Saite",d:"A-Saite",y:4,m:45},{l:"D",n:"D-Saite",d:"D-Saite",y:3,m:50},{l:"G",n:"G-Saite",d:"G-Saite",y:2,m:55},{l:"B",n:"B-Saite",d:"B-Saite",y:1,m:59},{l:"e",n:"hohe e-Saite",d:"hohen e-Saite",y:0,m:64}];
+const noteAt=(si,f)=>CH[(STR[si].m+f)%12];
 const ALL=[];
-STR.forEach((s,si)=>{for(let f=0;f<=12;f++){const n=CH[(s.m+f)%12];ALL.push({id:si+"-"+f,si,f,note:n,acc:n.includes("#")})}});
+STR.forEach((s,si)=>{for(let f=0;f<=12;f++){const n=noteAt(si,f);ALL.push({id:si+"-"+f,si,f,note:n,acc:n.includes("#")})}});
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-let box=store.get("fbt-box2",null);if(!box||!box.read)box={read:store.get("fbt-box",{}),play:{}};
-let mode=store.get("fbt-mode","read");if(mode!=="play")mode="read";
+let box=store.get("fbt-box2",null);if(!box||!box.read)box={read:store.get("fbt-box",{})};if(!box.find)box.find={};
+let mode=store.get("fbt-mode","read");if(mode!=="find")mode="read";
 let active=store.get("fbt-strings",[0,1,2,3,4,5]);
-let useShuf=store.get("fbt-shuf",false),showLabels=store.get("fbt-labels",true),useAcc=store.get("fbt-acc",false);
-let cur=null,last=null,locked=false,tries=0,revealed=false,session={ok:0,n:0},M=null;
+let useShuf=store.get("fbt-shuf",false),showLabels=store.get("fbt-labels",true),useAcc=store.get("fbt-acc",false),withStr=store.get("fbt-withstr",true);
+let cur=null,last=null,locked=false,errors=0,revealed=false,found=new Set(),flash=null,session={ok:0,n:0},M=null;
 const $=id=>document.getElementById(id);
 const saveBox=()=>store.set("fbt-box2",box);
-const L=40,R=330,T=22,G=19,FW=(R-L)/12;
+const L=40,R=330,T=20,G=22,FW=(R-L)/12;
+const dotX=f=>f===0?L-10:L+(f-.5)*FW,dotY=si=>T+STR[si].y*G;
 
 function drawNeck(dots,hi){
   let s="";
-  if(showLabels)["e","B","G","D","A","E"].forEach((l,i)=>s+=`<text x="14" y="${T+i*G+4}" font-size="12" text-anchor="middle" fill="var(--muted)">${l}</text>`);
+  if(showLabels)["e","B","G","D","A","E"].forEach((l,i)=>s+=`<text x="12" y="${T+i*G+4}" font-size="12" text-anchor="middle" fill="var(--muted)">${l}</text>`);
   for(let k=1;k<=12;k++)s+=`<line x1="${L+k*FW}" y1="${T}" x2="${L+k*FW}" y2="${T+5*G}" stroke="var(--line)" stroke-width="1.2"/>`;
   s+=`<line x1="${L}" y1="${T}" x2="${L}" y2="${T+5*G}" stroke="var(--ink)" stroke-width="4"/>`;
   for(let i=0;i<6;i++){const isHi=hi!=null&&STR[hi].y===i;s+=`<line x1="${L}" y1="${T+i*G}" x2="${R}" y2="${T+i*G}" stroke="${isHi?"var(--dot)":"var(--ink)"}" stroke-width="${isHi?3.5:0.7+i*0.3}"/>`}
-  const iy=T+5*G+14;[3,5,7,9].forEach(k=>s+=`<circle cx="${L+(k-.5)*FW}" cy="${iy}" r="3.2" fill="var(--line)"/>`);
+  const iy=T+5*G+16;[3,5,7,9].forEach(k=>s+=`<circle cx="${L+(k-.5)*FW}" cy="${iy}" r="3.2" fill="var(--line)"/>`);
   [-4.5,4.5].forEach(d=>s+=`<circle cx="${L+11.5*FW+d}" cy="${iy}" r="3.2" fill="var(--line)"/>`);
-  (dots||[]).forEach(c=>{const y=T+STR[c.si].y*G,x=c.f===0?L-9:L+(c.f-.5)*FW;s+=`<circle cx="${x}" cy="${y}" r="8" fill="var(--dot)"/>`});
+  (dots||[]).forEach(c=>{const x=dotX(c.f),y=dotY(c.si),k=c.k||"main";
+    if(k==="main")s+=`<circle cx="${x}" cy="${y}" r="8" fill="var(--dot)"/>`;
+    else if(k==="found")s+=`<circle cx="${x}" cy="${y}" r="8" fill="var(--okdot)"/>`;
+    else if(k==="hint")s+=`<circle cx="${x}" cy="${y}" r="7" fill="none" stroke="var(--dot)" stroke-width="2" stroke-dasharray="3 2"/>`;
+    else if(k==="wrong")s+=`<g stroke="var(--bad)" stroke-width="2.5" stroke-linecap="round"><line x1="${x-6}" y1="${y-6}" x2="${x+6}" y2="${y+6}"/><line x1="${x+6}" y1="${y-6}" x2="${x-6}" y2="${y+6}"/></g>`;
+  });
   $("neck").innerHTML=s;
 }
-function solution(c){const d=[{si:c.si,f:c.f}];if(c.f===0)d.push({si:c.si,f:12});return d}
-function targets(c){const t=[STR[c.si].m+c.f];if(c.f===0)t.push(STR[c.si].m+12);return t}
-function posTxt(c){
-  if(c.f===0)return mode==="play"?"leer oder 12. Bund, "+STR[c.si].n:"leere "+STR[c.si].n;
-  return STR[c.si].n+" · "+c.f+". Bund";
-}
-function pool(){return ALL.filter(c=>active.includes(c.si)&&(useAcc||!c.acc)&&(mode==="read"||c.f<12))}
 function setFb(t,cls){$("fb").textContent=t;$("fb").className="fb"+(cls?" "+cls:"")}
+function shuf(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 
+/* Aufgaben */
+function findPositions(note,si){
+  const out=[];(si!=null?[si]:active).forEach(s=>{for(let f=0;f<=12;f++)if(noteAt(s,f)===note)out.push({si:s,f})});return out;
+}
+function pool(){
+  if(mode==="read")return ALL.filter(c=>active.includes(c.si)&&(useAcc||!c.acc));
+  const notes=CH.filter(n=>useAcc||!n.includes("#"));
+  if(withStr){const out=[];active.forEach(si=>notes.forEach(n=>out.push({id:"s"+si+"-"+n,si,note:n})));return out}
+  if(!active.length)return [];
+  return notes.map(n=>({id:"n-"+n,si:null,note:n}));
+}
+function prepare(c){if(mode==="find")c.pos=findPositions(c.note,c.si);return c}
+function desc(c){
+  if(mode==="read")return c.f===0?"leere "+STR[c.si].n:STR[c.si].n+" · "+c.f+". Bund";
+  return disp(c.note)+(c.si!=null?" auf der "+STR[c.si].d:" überall");
+}
+const key=p=>p.si+"-"+p.f;
+function findDots(extraHint){
+  const d=cur.pos.filter(p=>found.has(key(p))).map(p=>({...p,k:"found"}));
+  if(revealed||extraHint)cur.pos.filter(p=>!found.has(key(p))).forEach(p=>d.push({...p,k:"hint"}));
+  if(flash)d.push({...flash,k:"wrong"});
+  return d;
+}
+function progressTxt(){return cur.pos.length>1?`${found.size} von ${cur.pos.length} gefunden`:"Tippe die Stelle an."}
 function render(){
   $("card").className="card";
   if(mode==="read"){
     $("target").hidden=true;drawNeck([cur],null);setFb("Welcher Ton ist das?");
     document.querySelectorAll(".keys button").forEach(b=>b.className="");
   }else{
-    $("target").hidden=false;$("target").innerHTML=`<b>${disp(cur.note)}</b><span>auf der ${STR[cur.si].d}</span>`;
-    drawNeck([],cur.si);setFb(P.on?"Spiel den Ton.":"Starte zuerst das Mikrofon.");
+    $("target").hidden=false;
+    $("target").innerHTML=`<b>${disp(cur.note)}</b><span>${cur.si!=null?"auf der "+STR[cur.si].d:"alle Stellen bis zum 12. Bund"}</span>`;
+    drawNeck(findDots(),cur.si);setFb(progressTxt());
   }
 }
-function newTarget(){locked=false;tries=0;revealed=false;P.lastEval=P.cand;P.count=0}
+function newTarget(){locked=false;errors=0;revealed=false;found=new Set();flash=null}
 function pick(){
   const p=pool();if(!p.length){cur=null;$("target").hidden=true;drawNeck([],null);setFb("Wähle mindestens eine Saite.");return}
   const bx=box[mode];
-  const w=p.map(c=>{const b=bx[c.id]||0;return c.id===last?0.01:[8,4,2,1,.5][Math.min(b,4)]});
-  let r=Math.random()*w.reduce((a,b)=>a+b,0),i=0;while(r>w[i]){r-=w[i];i++}
-  cur=p[Math.min(i,p.length-1)];last=cur.id;newTarget();
+  const w=p.map(c=>{const b=bx[c.id]||0;return c.id===last&&p.length>1?0:[8,4,2,1,.5][Math.min(b,4)]});
+  let r=Math.random()*w.reduce((a,b)=>a+b,0),i=0;while(i<p.length-1&&r>=w[i]){r-=w[i];i++}
+  cur=prepare({...p[i]});last=cur.id;newTarget();
   if(mode==="read"&&useShuf)buildKeys();
   render();
 }
+
+/* Ton erkennen */
 function answer(n,btn){
   if(mode!=="read"||!cur||locked)return;locked=true;
-  const ok=n===cur.note,pos=posTxt(cur);
+  const ok=n===cur.note,pos=desc(cur);
   if(ok){box.read[cur.id]=(box.read[cur.id]||0)+1;btn.className="right";$("card").className="card ok";setFb("Richtig: "+disp(cur.note)+" ("+pos+")","ok")}
   else{box.read[cur.id]=0;btn.className="wrong";const k=document.querySelector(`[data-n="${cur.note}"]`);if(k)k.className="right";$("card").className="card bad";setFb("Das ist "+disp(cur.note)+" ("+pos+")","bad")}
   saveBox();
   if(M){clearInterval(M.timer);M.res.push({c:cur,ok,t:(performance.now()-M.t0)/1000});setTimeout(nextMaster,ok?500:1500);return}
   session.n++;if(ok)session.ok++;upd();setTimeout(pick,ok?700:1800);
 }
-function evaluate(midi){
-  if(mode!=="play"||!cur||locked)return;
-  if(targets(cur).includes(midi)){
-    locked=true;drawNeck(solution(cur),cur.si);$("card").className="card ok";
-    setFb("Richtig: "+disp(cur.note)+" ("+posTxt(cur)+")","ok");
-    if(M){clearInterval(M.timer);M.res.push({c:cur,ok:true,t:(performance.now()-M.t0)/1000,tries});setTimeout(nextMaster,700);return}
-    session.n++;
-    if(!tries&&!revealed){session.ok++;box.play[cur.id]=(box.play[cur.id]||0)+1}else box.play[cur.id]=0;
-    saveBox();upd();setTimeout(pick,1300);
+
+/* Ton finden */
+function hitTest(ev){
+  const r=$("neck").getBoundingClientRect();if(!r.width)return null;
+  const x=(ev.clientX-r.left)/r.width*340,y=(ev.clientY-r.top)/r.height*160;
+  let best=null,bd=1e9;
+  for(let si=0;si<6;si++){const d=Math.abs(y-dotY(si));if(d<bd){bd=d;best=si}}
+  if(bd>G*0.6)return null;
+  if(x<L-22||x>R+6)return null;
+  const f=x<L+3?0:Math.min(12,Math.max(1,Math.ceil((x-L)/FW)));
+  return {si:best,f};
+}
+function tap(ev){
+  if(mode!=="find"||!cur||locked)return;
+  const h=hitTest(ev);if(!h)return;
+  if(found.has(key(h)))return;
+  if(cur.pos.some(p=>key(p)===key(h))){
+    found.add(key(h));flash=null;
+    if(found.size===cur.pos.length)return solved();
+    drawNeck(findDots(),cur.si);setFb(progressTxt());
   }else{
-    tries++;if(!M){box.play[cur.id]=0;saveBox()}
-    const same=midi%12===CH.indexOf(cur.note);
-    setFb(same?"Richtiger Ton, aber falsche Lage. Gesucht: auf der "+STR[cur.si].d+".":"Gehört: "+disp(CH[midi%12])+". Versuch es nochmal.","bad");
-    $("card").className="card bad";setTimeout(()=>{if(!locked)$("card").className="card"},500);
+    errors++;flash=h;
+    if(!M){box.find[cur.id]=0;saveBox()}
+    drawNeck(findDots(),cur.si);
+    setFb("Das ist "+disp(noteAt(h.si,h.f))+(cur.si!=null&&h.si!==cur.si?" (falsche Saite)":"")+". "+progressTxt(),"bad");
+    $("card").className="card bad";
+    const me=flash;setTimeout(()=>{if(flash===me){flash=null;if(!locked){$("card").className="card";drawNeck(findDots(),cur.si)}}},700);
   }
 }
+function solved(){
+  locked=true;flash=null;drawNeck(findDots(),cur.si);$("card").className="card ok";
+  const clean=!errors&&!revealed;
+  setFb((cur.pos.length>1?"Alle gefunden":"Richtig")+(errors?" · "+errors+" Fehltipp"+(errors>1?"s":""):""),"ok");
+  if(M){clearInterval(M.timer);M.res.push({c:cur,ok:true,t:(performance.now()-M.t0)/1000,errors});setTimeout(nextMaster,700);return}
+  session.n++;if(clean){session.ok++;box.find[cur.id]=(box.find[cur.id]||0)+1}else box.find[cur.id]=0;
+  saveBox();upd();setTimeout(pick,1300);
+}
+
 function upd(){
   const p=pool(),bx=box[mode],l=p.filter(c=>(bx[c.id]||0)>=3).length;
   $("stats").textContent=session.n?`${session.ok}/${session.n} richtig`:"";
@@ -193,12 +228,10 @@ function chips(){
 function buildKeys(){$("keys").innerHTML="";$("keys").className=useAcc?"keys acc":"keys";
   let list=(useAcc?CH:["C","D","E","F","G","A","B"]).slice();if(useShuf)list=shuf(list);
   list.forEach(n=>{const b=document.createElement("button");b.textContent=disp(n);b.dataset.n=n;b.onclick=()=>answer(n,b);$("keys").appendChild(b)})}
-function shuf(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function updModeUI(){
   document.querySelectorAll("#seg button").forEach(b=>b.className=b.dataset.m===mode?"on":"");
-  const play=mode==="play";
-  $("keys").hidden=play||!!(M&&M.done);$("play").hidden=!play;$("shufWrap").hidden=play;
-  $("micbox").hidden=P.on;$("meter").hidden=!P.on;
+  const find=mode==="find",done=!!(M&&M.done);
+  $("keys").hidden=find||done;$("pbtns").hidden=!find||done;$("shufWrap").hidden=find;$("strWrap").hidden=!find;
 }
 function setMode(m){
   if(M)exitMaster(true);
@@ -206,69 +239,9 @@ function setMode(m){
   updModeUI();upd();pick();
 }
 
-/* Tonerkennung */
-const P={on:false,ctx:null,an:null,buf:null,cand:null,count:0,lastEval:null,prevRms:0};
-function detect(b,sr){
-  let n=b.length,x=b,rms=0;
-  for(let i=0;i<n;i++)rms+=b[i]*b[i];
-  rms=Math.sqrt(rms/n);
-  if(rms<0.008)return {rms,f:0,c:0};
-  if(sr>30000){const h=n>>1,y=new Float32Array(h);for(let i=0;i<h;i++)y[i]=(b[2*i]+b[2*i+1])/2;x=y;n=h;sr/=2}
-  const minT=Math.floor(sr/1100),maxT=Math.min(Math.ceil(sr/70),(n>>1)-2);
-  const d=new Float32Array(maxT+2);
-  for(let t=0;t<=maxT+1;t++){let a=0,m=0;for(let i=0;i<n-t;i++){const u=x[i],v=x[i+t];a+=u*v;m+=u*u+v*v}d[t]=m>0?2*a/m:0}
-  let peaks=[],t=1;
-  while(t<=maxT&&d[t]>0)t++;
-  let best=-1,bi=-1;
-  for(;t<=maxT;t++){
-    if(d[t]>0){if(d[t]>best){best=d[t];bi=t}}
-    else if(bi>=0){peaks.push([bi,best]);best=-1;bi=-1}
-  }
-  if(bi>=0)peaks.push([bi,best]);
-  peaks=peaks.filter(p=>p[0]>=minT);
-  if(!peaks.length)return {rms,f:0,c:0};
-  let mx=0;for(const p of peaks)if(p[1]>mx)mx=p[1];
-  const p=peaks.find(p=>p[1]>=0.9*mx),i=p[0];
-  const a=d[i-1],bb=d[i],c=d[i+1],den=a-2*bb+c,sh=den?0.5*(a-c)/den:0;
-  return {rms,f:sr/(i+sh),c:bb};
-}
-function meter(m,c){
-  if(m==null){$("heard").textContent="–";$("needle").style.left="50%";$("needle").className="";return}
-  $("heard").textContent=CH[m%12].replace("#","♯")+(Math.floor(m/12)-1);
-  $("needle").style.left=(50+Math.max(-50,Math.min(50,c)))+"%";$("needle").className=Math.abs(c)<15?"in":"";
-}
-function handle(r){
-  const onset=r.rms>0.02&&r.rms>P.prevRms*1.8;P.prevRms=r.rms;
-  if(onset){P.lastEval=null;P.count=0}
-  if(!r.f||r.c<0.8){if(r.rms<0.008){P.lastEval=null;P.cand=null;P.count=0;meter(null)}return}
-  const mf=69+12*Math.log2(r.f/440),m=Math.round(mf),cents=Math.round((mf-m)*100);
-  if(m<38||m>80)return;
-  meter(m,cents);
-  if(m===P.cand)P.count++;else{P.cand=m;P.count=1}
-  if(P.count>=3&&m!==P.lastEval){P.lastEval=m;evaluate(m)}
-}
-function tick(){if(!P.on)return;P.an.getFloatTimeDomainData(P.buf);handle(detect(P.buf,P.ctx.sampleRate))}
-async function micStart(){
-  if(P.on)return true;
-  const err=t=>{$("micErr").textContent=t};
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){err("Mikrofon nicht verfügbar. Öffne die Seite über https, zum Beispiel auf GitHub Pages.");return false}
-  try{
-    const AC=window.AudioContext||window.webkitAudioContext;
-    if(!P.ctx)P.ctx=new AC();P.ctx.resume();
-    const st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-    await P.ctx.resume();
-    const src=P.ctx.createMediaStreamSource(st);P.an=P.ctx.createAnalyser();P.an.fftSize=4096;src.connect(P.an);
-    P.buf=new Float32Array(P.an.fftSize);P.on=true;err("");setInterval(tick,50);
-    updModeUI();if(mode==="play"&&cur&&!locked)setFb("Spiel den Ton.");
-    return true;
-  }catch(e){err("Kein Zugriff aufs Mikrofon. In der Vorschau auf claude.ai ist es gesperrt. Nutze die Version auf GitHub Pages und erlaube dort den Zugriff.");return false}
-}
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&P.ctx)P.ctx.resume()});
-
 /* Master-Modus */
-async function startMaster(){
-  const s=Math.max(1,Math.min(30,Math.round(+$("secs").value||5)));$("secs").value=s;store.set("fbt-secs",s);
-  if(mode==="play"&&!P.on){const ok=await micStart();if(!ok)return}
+function startMaster(){
+  const s=Math.max(1,Math.min(60,Math.round(+$("secs").value||5)));$("secs").value=s;store.set("fbt-secs-"+mode,s);
   const p=pool();if(!p.length)return;
   let q=shuf(p);while(q.length<10)q=q.concat(shuf(p));
   M={q:q.slice(0,10),i:-1,res:[],secs:s,timer:null,done:false};
@@ -278,32 +251,34 @@ async function startMaster(){
 }
 function nextMaster(){
   if(!M)return;M.i++;if(M.i>=10)return endMaster();
-  cur=M.q[M.i];newTarget();
+  cur=prepare({...M.q[M.i]});newTarget();
   if(mode==="read"&&useShuf)buildKeys();
-  render();$("mCount").textContent=`Note ${M.i+1} von 10`;
+  render();$("mCount").textContent=`Aufgabe ${M.i+1} von 10`;
   M.t0=performance.now();$("tbar").style.width="100%";clearInterval(M.timer);
   M.timer=setInterval(()=>{const el=(performance.now()-M.t0)/1000;$("tbar").style.width=Math.max(0,100-el/M.secs*100)+"%";if(el>=M.secs){clearInterval(M.timer);timeUp()}},50);
 }
 function timeUp(){
   if(!M||locked)return;locked=true;box[mode][cur.id]=0;saveBox();
-  if(mode==="read"){const k=document.querySelector(`[data-n="${cur.note}"]`);if(k)k.className="right"}
-  else drawNeck(solution(cur),cur.si);
-  $("card").className="card bad";setFb("Zeit abgelaufen: "+disp(cur.note)+" ("+posTxt(cur)+")","bad");
-  M.res.push({c:cur,ok:false,t:M.secs,to:true});setTimeout(nextMaster,mode==="play"?2200:1500);
+  if(mode==="read"){const k=document.querySelector(`[data-n="${cur.note}"]`);if(k)k.className="right";setFb("Zeit abgelaufen: "+disp(cur.note)+" ("+desc(cur)+")","bad")}
+  else{flash=null;drawNeck(findDots(true),cur.si);setFb("Zeit abgelaufen: "+found.size+" von "+cur.pos.length+" gefunden","bad")}
+  $("card").className="card bad";
+  M.res.push({c:cur,ok:false,t:M.secs,to:true,got:mode==="find"?found.size:0});setTimeout(nextMaster,mode==="find"?2200:1500);
 }
 function endMaster(){
   clearInterval(M.timer);M.done=true;
   const r=M.res,n=r.filter(x=>x.ok).length,okT=r.filter(x=>x.ok).map(x=>x.t);
   const avg=okT.length?okT.reduce((a,b)=>a+b,0)/okT.length:null;
-  const key="fbt-best-"+(mode==="play"?"play-":"")+M.secs+"-"+(useAcc?1:0),best=store.get(key,null);
+  const errs=r.reduce((a,x)=>a+(x.errors||0),0);
+  const bkey="fbt-best-"+(mode==="find"?"find-"+(withStr?"s-":"a-"):"")+M.secs+"-"+(useAcc?1:0),best=store.get(bkey,null);
   const rec=n>0&&(!best||n>best.n||(n===best.n&&avg<best.avg));
-  if(rec)store.set(key,{n,avg});
+  if(rec)store.set(bkey,{n,avg});
   const miss=r.filter(x=>!x.ok);
-  $("card").hidden=true;$("keys").hidden=true;$("play").hidden=true;$("fb").hidden=true;$("tbarW").hidden=true;$("mCount").textContent="Abrechnung";
+  $("card").hidden=true;$("keys").hidden=true;$("pbtns").hidden=true;$("fb").hidden=true;$("tbarW").hidden=true;$("mCount").textContent="Abrechnung";
+  const line=x=>mode==="find"?`<li><span>${desc(x.c)}</span><span>${x.got} von ${x.c.pos.length} · Zeit</span></li>`:`<li><span>${desc(x.c)}</span><span>${disp(x.c.note)}${x.to?" · Zeit":""}</span></li>`;
   $("result").innerHTML=`<div class="score">${n}/10</div>
-  <div style="color:var(--muted);margin-top:8px">${mode==="play"?"Ton spielen · ":""}${avg!==null?"Ø "+avg.toFixed(1)+" s pro richtige Antwort · ":""}${M.secs} s pro Note${useAcc?" · mit ♯/♭":""}</div>
+  <div style="color:var(--muted);margin-top:8px">${mode==="find"?"Ton finden"+(withStr?" mit Saite":" überall")+" · ":""}${avg!==null?"Ø "+avg.toFixed(1)+" s · ":""}${M.secs} s pro Aufgabe${useAcc?" · mit ♯/♭":""}${mode==="find"?" · "+errs+" Fehltipp"+(errs===1?"":"s"):""}</div>
   <div style="margin-top:8px;font-size:14px;color:${rec?"var(--ok)":"var(--muted)"}">${rec?"Neuer Rekord":best?"Rekord: "+best.n+"/10"+(best.avg!=null?", Ø "+best.avg.toFixed(1)+" s":""):""}</div>
-  ${miss.length?"<ul>"+miss.map(x=>`<li><span>${posTxt(x.c)}</span><span>${disp(x.c.note)}${x.to?" · Zeit":""}</span></li>`).join("")+"</ul>":`<div style="margin-top:14px">Alles richtig.</div>`}
+  ${miss.length?"<ul>"+miss.map(line).join("")+"</ul>":`<div style="margin-top:14px">Alles richtig.</div>`}
   <div class="rbtns"><button class="btn" id="rAgain">Nochmal</button><button class="btn sec" id="rBack">Zurück zum Üben</button></div>`;
   $("result").hidden=false;
   $("rAgain").onclick=startMaster;$("rBack").onclick=()=>exitMaster();
@@ -312,23 +287,24 @@ function exitMaster(silent){
   if(M)clearInterval(M.timer);M=null;
   document.querySelector("main").classList.remove("running");
   $("result").hidden=true;$("tbarW").hidden=true;$("card").hidden=false;$("fb").hidden=false;
-  updModeUI();if(!silent){buildKeys();upd();pick()}
+  updModeUI();loadSecs();if(!silent){buildKeys();upd();pick()}
 }
+function loadSecs(){$("secs").value=store.get("fbt-secs-"+mode,store.get("fbt-secs",mode==="find"?(withStr?5:20):5))}
 
 /* Verdrahtung */
-document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>{if(b.dataset.m!==mode)setMode(b.dataset.m)});
+document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>{if(b.dataset.m!==mode){setMode(b.dataset.m);loadSecs()}});
+$("neck").addEventListener("pointerdown",tap);
 $("optShuf").checked=useShuf;$("optShuf").onchange=e=>{useShuf=e.target.checked;store.set("fbt-shuf",useShuf);buildKeys()};
+$("optStr").checked=withStr;$("optStr").onchange=e=>{withStr=e.target.checked;store.set("fbt-withstr",withStr);last=null;upd();pick()};
 $("optLabels").checked=showLabels;$("optAcc").checked=useAcc;
-$("optLabels").onchange=e=>{showLabels=e.target.checked;store.set("fbt-labels",showLabels);if(cur&&!locked)render();else if(cur)drawNeck(mode==="read"?[cur]:solution(cur),mode==="play"?cur.si:null)};
+$("optLabels").onchange=e=>{showLabels=e.target.checked;store.set("fbt-labels",showLabels);if(!cur)return;if(mode==="read")drawNeck([cur],null);else drawNeck(findDots(),cur.si)};
 $("optAcc").onchange=e=>{useAcc=e.target.checked;store.set("fbt-acc",useAcc);buildKeys();upd();pick()};
-$("micBtn").onclick=()=>micStart();
-$("pShow").onclick=()=>{if(!cur||locked)return;revealed=true;box.play[cur.id]=0;saveBox();drawNeck(solution(cur),cur.si);setFb("Hier liegt "+disp(cur.note)+". Spiel ihn einmal, dann geht es weiter.")};
+$("pShow").onclick=()=>{if(!cur||locked||mode!=="find")return;revealed=true;box.find[cur.id]=0;saveBox();drawNeck(findDots(),cur.si);setFb("Gestrichelt: hier fehlt noch etwas. Tippe die Stellen an.")};
 $("pSkip").onclick=()=>{if(!locked)pick()};
 let armed=false;$("reset").onclick=()=>{if(!armed){armed=true;$("reset").textContent="Nochmal tippen zum Bestätigen";setTimeout(()=>{armed=false;$("reset").textContent="Fortschritt zurücksetzen"},3000);return}
   armed=false;$("reset").textContent="Fortschritt zurücksetzen";box[mode]={};saveBox();session={ok:0,n:0};upd()};
 $("mStart").onclick=startMaster;$("mAbort").onclick=()=>exitMaster();
-$("secs").value=store.get("fbt-secs",5);
-buildKeys();chips();updModeUI();upd();pick();
+loadSecs();buildKeys();chips();updModeUI();upd();pick();
 </script>
 </body>
 </html>
